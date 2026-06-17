@@ -91,7 +91,7 @@
     "@vitest/ui": "catalog:",
     "eslint": "^10.4.1",
     "memfs": "^4.56.11",
-    "rollup": "^4.61.1",
+    "rollup": "^4.62.0",
     "tsup": "^8.5.1",
     "tsx": "catalog:",
     "type-fest": "^5.4.4",
