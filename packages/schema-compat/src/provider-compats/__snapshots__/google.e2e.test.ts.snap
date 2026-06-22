@@ -374,66 +374,63 @@ exports[`Google e2e test > should be succesful with structured_output 2`] = `
     "actualData": 2023-01-01T00:00:00.000Z,
     "arrayMax": [
       "a",
-      "b",
-      "c",
     ],
     "arrayMin": [
       "a",
     ],
     "date": 2023-01-01T00:00:00.000Z,
-    "dateAfter": 2024-05-01T00:00:00.000Z,
-    "dateBefore": 2020-01-01T00:00:00.000Z,
-    "default": "default value",
+    "dateAfter": 2024-02-01T00:00:00.000Z,
+    "dateBefore": 2023-01-01T00:00:00.000Z,
+    "default": "a",
     "discriminatedUnion": {
       "kind": "circle",
-      "r": 5,
+      "r": 1,
     },
     "enum": "A",
     "exampleArray": [
       "a",
-      "b",
     ],
     "literal": "the-only-allowed-value",
     "nativeEnum": "B",
     "nullable": "",
-    "number": 10,
+    "number": 1,
     "numberGt": 4,
     "numberGte": 1,
-    "numberInt": 7,
+    "numberInt": 3,
     "numberLt": 5,
     "numberLte": 1,
-    "numberMultipleOf": 4,
+    "numberMultipleOf": 2,
     "object": {
       "bar": 1,
-      "foo": "test",
+      "foo": "a",
     },
     "objectLoose": {},
     "objectNested": {
       "user": {
-        "age": 25,
-        "name": "Alice",
+        "age": 18,
+        "name": "ab",
       },
     },
     "objectPassthrough": {},
     "optional": "",
-    "string": "sample",
-    "stringCuid": "c1234567",
+    "string": "text",
+    "stringCuid": "c123456",
     "stringEmail": "test@example.com",
-    "stringEmoji": "🚀",
+    "stringEmoji": "😀",
     "stringMax": "abcdefghij",
     "stringMin": "abcde",
-    "stringRegex": "test-foo",
+    "stringRegex": "test-123",
     "stringUrl": "https://example.com",
     "stringUuid": "123e4567-e89b-12d3-a456-426614174000",
     "tuple": [
-      "string value",
-      123,
+      "a",
+      1,
     ],
     "unionObjects": {
-      "amount": 5,
-      "inventoryItemName": "item",
+      "amount": 1,
+      "inventoryItemName": "a",
     },
-    "unionPrimitives": "test string",
+    "unionPrimitives": 1,
   },
 }
 `;
@@ -441,18 +438,18 @@ exports[`Google e2e test > should be succesful with structured_output 2`] = `
 exports[`Google e2e test > should handle tool call with manySchemas input 1`] = `
 {
   "value": {
-    "actualData": 2023-10-01T12:00:00.000Z,
+    "actualData": 2024-05-15T12:00:00.000Z,
     "arrayMax": [
-      "one",
-      "two",
+      "item1",
+      "item2",
     ],
     "arrayMin": [
-      "one",
+      "item1",
     ],
-    "date": 2023-10-01T12:00:00.000Z,
+    "date": 2024-05-15T12:00:00.000Z,
     "dateAfter": 2025-01-01T12:00:00.000Z,
-    "dateBefore": 2020-01-01T12:00:00.000Z,
-    "default": "default text",
+    "dateBefore": 2023-01-01T12:00:00.000Z,
+    "default": "sample text that is the default value",
     "discriminatedUnion": {
       "kind": "circle",
       "r": 5,
@@ -467,17 +464,17 @@ exports[`Google e2e test > should handle tool call with manySchemas input 1`] = 
     "nullable": null,
     "number": 42,
     "numberGt": 5,
-    "numberGte": 2,
+    "numberGte": 1,
     "numberInt": 10,
     "numberLt": 4,
-    "numberLte": 0,
-    "numberMultipleOf": 8,
+    "numberLte": 1,
+    "numberMultipleOf": 4,
     "object": {
-      "bar": 1,
-      "foo": "test",
+      "bar": 123,
+      "foo": "hello",
     },
     "objectLoose": {
-      "sampleKey": "sampleValue",
+      "key": "value",
     },
     "objectNested": {
       "user": {
@@ -486,92 +483,71 @@ exports[`Google e2e test > should handle tool call with manySchemas input 1`] = 
       },
     },
     "objectPassthrough": {
-      "sampleKey": "sampleValue",
+      "key": "value",
     },
-    "string": "sample",
+    "string": "Sample text",
     "stringCuid": "c1234567",
     "stringEmail": "test@example.com",
-    "stringEmoji": "🚀",
-    "stringMax": "sample",
-    "stringMin": "sample-text",
-    "stringRegex": "test-string",
+    "stringEmoji": "😀",
+    "stringMax": "1234567890",
+    "stringMin": "Hello",
+    "stringRegex": "test-123",
     "stringUrl": "https://example.com",
     "stringUuid": "123e4567-e89b-12d3-a456-426614174000",
     "tuple": [
-      "test",
+      "hello",
       42,
     ],
     "unionObjects": {
       "amount": 10,
-      "inventoryItemName": "apple",
+      "inventoryItemName": "widget",
     },
-    "unionPrimitives": "union-test",
+    "unionPrimitives": 100,
   },
 }
 `;
 
 exports[`Google e2e test > should handle tool call with manySchemas input and output 1`] = `
-"I have successfully called the \`manySchemasTool\` using valid sample data strictly matching all the provided schema constraints. Here is the validated tool output returned by the system:
+"The tool \`manySchemasTool\` has been successfully called with the validated sample data. Here is the returned output:
 
 \`\`\`json
 {
-  "actualData": "2023-01-01T00:00:00.000Z",
-  "arrayMax": ["one", "two"],
-  "arrayMin": ["one"],
-  "date": "2023-01-01T00:00:00.000Z",
-  "dateAfter": "2024-02-01T00:00:00.000Z",
-  "dateBefore": "2022-01-01T00:00:00.000Z",
-  "default": "default value",
-  "discriminatedUnion": {
-    "kind": "circle",
-    "r": 5
-  },
+  "actualData": "2024-05-10T12:00:00.000Z",
+  "arrayMax": ["a", "b", "c"],
+  "arrayMin": ["a"],
+  "date": "2024-05-10T12:00:00.000Z",
+  "dateAfter": "2024-05-10T12:00:00.000Z",
+  "dateBefore": "2023-01-01T12:00:00.000Z",
+  "default": "default text",
+  "discriminatedUnion": { "kind": "circle", "r": 5 },
   "enum": "A",
   "exampleArray": ["example"],
   "literal": "the-only-allowed-value",
-  "nativeEnum": "B",
+  "nativeEnum": "A",
   "nullable": null,
-  "number": 42,
-  "numberGt": 4,
-  "numberGte": 1,
+  "number": 5,
+  "numberGt": 5,
+  "numberGte": 2,
   "numberInt": 10,
-  "numberLt": 5,
-  "numberLte": 1,
-  "numberMultipleOf": 8,
-  "object": {
-    "bar": 123,
-    "foo": "test"
-  },
-  "objectLoose": {
-    "exampleKey": "exampleData"
-  },
-  "objectNested": {
-    "user": {
-      "age": 25,
-      "name": "Alice"
-    }
-  },
-  "objectPassthrough": {
-    "exampleKey": "exampleData"
-  },
+  "numberLt": 4,
+  "numberLte": 0,
+  "numberMultipleOf": 4,
+  "object": { "bar": 1, "foo": "test" },
+  "objectLoose": { "key": "value" },
+  "objectNested": { "user": { "age": 18, "name": "ab" } },
+  "objectPassthrough": { "key": "value" },
   "string": "Sample text",
-  "stringCuid": "c1234567",
+  "stringCuid": "c123456",
   "stringEmail": "test@example.com",
-  "stringEmoji": "🚀",
+  "stringEmoji": "😀",
   "stringMax": "1234567890",
   "stringMin": "12345",
-  "stringRegex": "test-string",
+  "stringRegex": "test-abc",
   "stringUrl": "https://example.com",
   "stringUuid": "123e4567-e89b-12d3-a456-426614174000",
-  "tuple": [
-    "tuple_string",
-    42
-  ],
-  "unionObjects": {
-    "amount": 10,
-    "inventoryItemName": "Widget"
-  },
-  "unionPrimitives": 100
+  "tuple": ["test", 1],
+  "unionObjects": { "amount": 10, "inventoryItemName": "item" },
+  "unionPrimitives": "test"
 }
 \`\`\`"
 `;
