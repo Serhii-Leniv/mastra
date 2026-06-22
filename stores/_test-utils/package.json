@@ -21,6 +21,7 @@
   "devDependencies": {
     "@mastra/core": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
-    "@vitest/ui": "catalog:"
+    "@vitest/ui": "catalog:",
+    "vitest": "catalog:"
   }
 }
