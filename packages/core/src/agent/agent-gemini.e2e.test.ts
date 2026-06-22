@@ -21,6 +21,20 @@ let mockStorage: InMemoryStore;
 
 let mockGateway: any;
 
+function normalizeGeminiFunctionParts(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeGeminiFunctionParts);
+  if (value === null || typeof value !== 'object') return value;
+
+  const object = value as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(object)) {
+    if (key === 'id' && 'name' in object && ('args' in object || 'response' in object)) continue;
+    if (key === 'thoughtSignature' && 'functionCall' in object) continue;
+    next[key] = normalizeGeminiFunctionParts(child);
+  }
+  return next;
+}
+
 beforeEach(async c => {
   memory = new MockMemory();
   requestContext = new RequestContext();
@@ -58,7 +72,7 @@ beforeEach(async c => {
       serialized = serialized.replace(/(\\*"completedAt\\*":\s*)\d{10,}/g, '$10');
       serialized = serialized.replace(/(\\*"endedAt\\*":\s*)\d{10,}/g, '$10');
 
-      const parsed = JSON.parse(serialized);
+      const parsed = normalizeGeminiFunctionParts(JSON.parse(serialized));
 
       return { url, body: parsed };
     },
