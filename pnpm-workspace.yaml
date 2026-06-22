@@ -56,7 +56,7 @@ packageExtensions:
       # client; if this resolves to a different vitest than the workspace,
       # a second SnapshotClient is created and every toMatchSnapshot() in
       # tests that import from that entrypoint fails. Keep these in sync.
-      vitest: 4.1.8
+      vitest: 4.1.9
   '@uiw/codemirror-theme-dracula@*':
     dependencies:
       '@babel/runtime': ^7.29.2

@@ -52,6 +52,7 @@ describe('NestJS Adapter - RequestContext parsing', () => {
       method: 'GET',
       query: { requestContext: encoded },
       res: undefined,
+      get: vi.fn(),
     };
 
     const service = await createService(context, request);
@@ -66,6 +67,7 @@ describe('NestJS Adapter - RequestContext parsing', () => {
       method: 'POST',
       body: { requestContext: { sessionId: 'session-9' } },
       res: undefined,
+      get: vi.fn(),
     };
 
     const service = await createService(context, request);

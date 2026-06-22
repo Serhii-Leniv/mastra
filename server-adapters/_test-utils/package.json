@@ -23,6 +23,7 @@
     "@mastra/core": "workspace:*",
     "@mastra/server": "workspace:*",
     "@mastra/mcp": "workspace:*",
+    "vitest": "catalog:",
     "zod": "catalog:"
   }
 }
