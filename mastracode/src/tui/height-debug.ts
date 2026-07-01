@@ -20,13 +20,26 @@ let frameCount = 0;
 function getLogStream(): fs.WriteStream | undefined {
   if (!enabled) return undefined;
   if (!logStream) {
-    const logFile = path.join(getAppDataDir(), 'height-debug.log');
-    // Truncate on start so we get a clean session
-    logStream = fs.createWriteStream(logFile, { flags: 'w' });
-    logStream.write(`=== MC Height Debug started ${new Date().toISOString()} ===\n`);
-    logStream.write(`PID: ${process.pid}\n`);
-    logStream.write(`Terminal: ${process.stdout.columns}x${process.stdout.rows}\n`);
-    logStream.write(`TERM: ${process.env.TERM ?? '(unset)'}\n\n`);
+    try {
+      const logDir = getAppDataDir();
+      const logFile = path.join(logDir, 'height-debug.log');
+      // Truncate on start so we get a clean session
+      logStream = fs.createWriteStream(logFile, { flags: 'w' });
+      logStream.on('error', () => {
+        // Silently disable further logging if the stream errors
+        logStream = undefined;
+      });
+      logStream.write(`=== MC Height Debug started ${new Date().toISOString()} ===\n`);
+      logStream.write(`PID: ${process.pid}\n`);
+      logStream.write(`Terminal: ${process.stdout.columns}x${process.stdout.rows}\n`);
+      logStream.write(`TERM: ${process.env.TERM ?? '(unset)'}\n`);
+      logStream.write(`LogDir: ${logDir}\n\n`);
+    } catch {
+      // If we can't create the log file (permissions, path issues), fall back to
+      // stderr so the user at least sees something.
+      process.stderr.write(`[MC_DEBUG_HEIGHT] Failed to create height-debug.log, falling back to stderr\n`);
+      logStream = undefined;
+    }
   }
   return logStream;
 }
@@ -90,8 +103,13 @@ export function logForceRender(reason: string): void {
  * Log arbitrary debug messages.
  */
 export function logHeightDebug(message: string): void {
+  if (!enabled) return;
   const stream = getLogStream();
-  if (!stream) return;
+  if (!stream) {
+    // Fallback: write to stderr if the file stream couldn't be created
+    process.stderr.write(`[MC_HEIGHT] ${message}\n`);
+    return;
+  }
   stream.write(`[${Date.now()}] ${message}\n`);
 }
 

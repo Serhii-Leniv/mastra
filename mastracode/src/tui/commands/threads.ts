@@ -132,13 +132,14 @@ export async function handleThreadsCommand(ctx: SlashCommandContext): Promise<vo
         }
         state.pendingNewThread = false;
 
-        state.chatContainer.clear();
-        state.allToolComponents = [];
-        state.allSystemReminderComponents = [];
-        state.messageComponentsById.clear();
-        state.allShellComponents = [];
-        state.pendingTools.clear();
-        state.pendingTaskToolIds?.clear();
+        // Note: we do NOT manually clear chatContainer here. The thread_changed
+        // event (emitted by session.thread.switch above) triggers the event handler
+        // which calls renderExistingMessages(). renderExistingMessages() clears
+        // chatContainer and all per-thread state internally. Adding a standalone
+        // chatContainer.clear() here creates a race: the event handler's
+        // requestRender(true) can fire doRender() while chatContainer is empty
+        // (between our clear and listActiveMessages resolving), producing a
+        // permanently broken 19-line render.
         await ctx.renderExistingMessages();
 
         ctx.showInfo(`Switched to: ${thread.title || thread.id}`);

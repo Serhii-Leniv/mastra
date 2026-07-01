@@ -175,12 +175,18 @@ process.on('exit', () => {
   restoreTerminalForeground();
   releaseAllThreadLocks();
 });
-process.on('SIGINT', () => {
+
+// For all termination signals: stop the TUI FIRST (synchronous, disables keyboard
+// protocol immediately) before doing any async cleanup. This ensures the terminal
+// escape sequences are written even if asyncCleanup hangs or the process is killed
+// during cleanup.
+const handleTermSignal = () => {
+  tui?.stop();
   void asyncCleanup().finally(() => process.exit(0));
-});
-process.on('SIGTERM', () => {
-  void asyncCleanup().finally(() => process.exit(0));
-});
+};
+process.on('SIGINT', handleTermSignal);
+process.on('SIGTERM', handleTermSignal);
+process.on('SIGHUP', handleTermSignal);
 
 function hasEconnrefused(err: unknown, depth = 0): boolean {
   if (!err || depth > 5) return false;

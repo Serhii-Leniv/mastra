@@ -724,6 +724,17 @@ function applyTaskToolResult(
 
 const STARTUP_MESSAGE_WINDOW_SIZE = 200;
 
+/**
+ * Monotonically increasing version counter for renderExistingMessages calls.
+ * When a new call begins, it increments the counter and captures the value.
+ * After each async yield point, it compares its captured version against the
+ * current value — if they differ, a newer call has superseded it and this one
+ * bails out early. This prevents a stale async call (e.g. from the event
+ * handler's thread_changed) from clearing chatContainer after a fresher call
+ * (e.g. from threads.ts) has already rebuilt it.
+ */
+let renderVersion = 0;
+
 function getLatestMessageTimestamp(messages: AgentControllerMessage[]): number | undefined {
   let latest: number | undefined;
   for (const message of messages) {
@@ -739,7 +750,18 @@ function getLatestMessageTimestamp(messages: AgentControllerMessage[]): number |
  * Called on thread switch and initial load.
  */
 export async function renderExistingMessages(state: TUIState): Promise<void> {
+  const myVersion = ++renderVersion;
+
   const messages = await state.session.thread.listActiveMessages({ limit: STARTUP_MESSAGE_WINDOW_SIZE });
+
+  // Another renderExistingMessages call was made while we were awaiting
+  // listActiveMessages — this call is stale, bail out to avoid clearing
+  // chatContainer that the newer call is building/has built.
+  if (renderVersion !== myVersion) {
+    logHeightDebug(`renderExistingMessages: SUPERSEDED (myVersion=${myVersion}, current=${renderVersion}), bailing`);
+    return;
+  }
+
   state.lastRenderedMessageAt = getLatestMessageTimestamp(messages);
 
   const threadId = state.session.thread.getId?.() ?? 'unknown';
@@ -762,6 +784,8 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
   // thread's active agent run don't leak into the new thread.
   state.streamingComponent = undefined;
   state.streamingMessage = undefined;
+  state.lastSubmitPlanComponent = undefined;
+  state.lastAskUserComponent = undefined;
   state.seenToolCallIds.clear();
   state.subagentToolCallIds.clear();
   state.currentRunSystemReminderKeys.clear();
@@ -984,6 +1008,13 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
                 ? resolvePlanPath(projectPath ?? process.cwd(), submittedPath)
                 : undefined;
               const recovered = recoverAbsPath ? await readPlanFile(recoverAbsPath) : undefined;
+              // Check for supersession after async readPlanFile
+              if (renderVersion !== myVersion) {
+                logHeightDebug(
+                  `renderExistingMessages: SUPERSEDED during plan file read (myVersion=${myVersion}, current=${renderVersion})`,
+                );
+                return;
+              }
               const planBody = submittedPlan?.plan ?? recovered?.plan ?? '';
               const planTitle = submittedPlan?.title || recovered?.title || 'Implementation Plan';
               const planResult = new PlanResultComponent({

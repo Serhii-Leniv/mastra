@@ -42,6 +42,7 @@ import {
   handleToolEnd,
 } from './handlers/index.js';
 import type { EventHandlerContext } from './handlers/types.js';
+import { logHeightDebug } from './height-debug.js';
 import type { TUIState } from './state.js';
 import { getGithubPrSubscriptionsFromMetadata } from './state.js';
 
@@ -190,6 +191,9 @@ export async function dispatchEvent(
       break;
 
     case 'thread_changed': {
+      logHeightDebug(
+        `event:thread_changed threadId=${event.threadId} chatChildren=${state.chatContainer.children.length}`,
+      );
       ectx.showInfo(`Switched to thread: ${event.threadId}`);
       // Clear per-thread ephemeral state first so renderExistingMessages
       // and other downstream observers see clean state.
@@ -449,6 +453,7 @@ export async function dispatchEvent(
     }
 
     case 'tool_suspended': {
+      logHeightDebug(`event:tool_suspended tool=${event.toolName} chatChildren=${state.chatContainer.children.length}`);
       // Interactive built-in tools pause via the native tool-suspension primitive.
       // Route the suspension to the matching prompt UI using the suspend payload;
       // the UI resumes the tool by calling controller.session.respondToToolSuspension({ toolCallId }).
