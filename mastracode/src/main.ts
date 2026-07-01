@@ -10,6 +10,7 @@ import { hasHeadlessFlag, runMCCli } from './headless/index.js';
 import { createBrowserFromSettings, loadSettings } from './onboarding/settings.js';
 import { formatScaffoldSuccess, scaffoldPlugin } from './plugins/scaffold.js';
 import { detectTerminalTheme } from './tui/detect-theme.js';
+import { enablePiTuiDebug } from './tui/height-debug.js';
 import { MastraTUI } from './tui/index.js';
 import { applyThemeMode, restoreTerminalForeground } from './tui/theme.js';
 import { setupDebugLogging } from './utils/debug-log.js';
@@ -18,12 +19,16 @@ import { releaseAllThreadLocks } from './utils/thread-lock.js';
 import { getCurrentVersion } from './utils/update-check.js';
 import { createMastraCode } from './index.js';
 
+// Enable pi-tui debug logging when MC_DEBUG_HEIGHT=1. Must run before TUI init.
+enablePiTuiDebug();
+
 let controller: Awaited<ReturnType<typeof createMastraCode>>['controller'];
 let mcpManager: Awaited<ReturnType<typeof createMastraCode>>['mcpManager'];
 let hookManager: Awaited<ReturnType<typeof createMastraCode>>['hookManager'];
 let authStorage: Awaited<ReturnType<typeof createMastraCode>>['authStorage'];
 let signalsPubSub: Awaited<ReturnType<typeof createMastraCode>>['signalsPubSub'];
 let analytics: ReturnType<typeof createMastraCodeAnalytics> | undefined;
+let tui: MastraTUI | undefined;
 
 function isTruthyEnv(name: string): boolean {
   return ['1', 'true', 'yes', 'on'].includes(process.env[name]?.trim().toLowerCase() ?? '');
@@ -117,7 +122,7 @@ async function tuiMain(pipedInput?: string | null) {
     theme: themeMode,
   });
 
-  const tui = new MastraTUI({
+  tui = new MastraTUI({
     controller: controller,
     session,
     hookManager,
@@ -162,6 +167,11 @@ process.on('beforeExit', () => {
   void asyncCleanup();
 });
 process.on('exit', () => {
+  // Ensure terminal protocols (kitty keyboard, modifyOtherKeys, bracketed paste,
+  // raw mode) are disabled on ANY exit path. Without this, killing the process
+  // via SIGINT/SIGTERM leaves the terminal in a corrupted state where keypresses
+  // produce escape sequences like "5;99~" instead of normal characters.
+  tui?.stop();
   restoreTerminalForeground();
   releaseAllThreadLocks();
 });

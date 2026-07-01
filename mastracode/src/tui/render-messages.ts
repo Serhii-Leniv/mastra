@@ -35,6 +35,7 @@ import { TemporalGapComponent } from './components/temporal-gap.js';
 import { ToolExecutionComponentEnhanced } from './components/tool-execution-enhanced.js';
 import { PendingUserMessageComponent, UserMessageComponent } from './components/user-message.js';
 import { formatToolResult, isTaskMutationTool } from './handlers/tool.js';
+import { logHeightDebug, logThreadLoad } from './height-debug.js';
 import type { TUIState } from './state.js';
 import { BOX_INDENT, getMarkdownTheme, theme } from './theme.js';
 
@@ -741,6 +742,12 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
   const messages = await state.session.thread.listActiveMessages({ limit: STARTUP_MESSAGE_WINDOW_SIZE });
   state.lastRenderedMessageAt = getLatestMessageTimestamp(messages);
 
+  const threadId = state.session.thread.getId?.() ?? 'unknown';
+  logThreadLoad(threadId, messages.length);
+  logHeightDebug(
+    `renderExistingMessages: termRows=${process.stdout.rows} termCols=${process.stdout.columns} messages=${messages.length}`,
+  );
+
   state.chatContainer.clear();
   state.pendingTools.clear();
   state.pendingTaskToolIds?.clear();
@@ -1092,6 +1099,12 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
   }
 
   reconcileChatBoundarySpacers(state.chatContainer);
+
+  logHeightDebug(
+    `renderExistingMessages done: chatChildren=${state.chatContainer.children.length} ` +
+      `termRows=${process.stdout.rows} termCols=${process.stdout.columns}`,
+  );
+
   // Force a full TUI redraw to reset the differential rendering cache
   // (previousLines, maxLinesRendered, previousViewportTop, cursor positions).
   // Without this, stale cached state from the previous thread can cause
