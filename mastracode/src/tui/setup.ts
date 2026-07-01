@@ -87,7 +87,9 @@ export function setupKeyboardShortcuts(
     state.ui.stop();
     const onContinue = () => {
       state.ui.start();
-      state.ui.requestRender();
+      // Force full redraw: the terminal screen was cleared during suspend
+      // but the rendering cache still holds the old frame.
+      state.ui.requestRender(true);
     };
     process.once('SIGCONT', onContinue);
     try {
@@ -95,7 +97,7 @@ export function setupKeyboardShortcuts(
     } catch {
       process.off('SIGCONT', onContinue);
       state.ui.start();
-      state.ui.requestRender();
+      state.ui.requestRender(true);
       showError(state, 'Unable to suspend in the current terminal');
     }
   });

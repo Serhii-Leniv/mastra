@@ -421,7 +421,10 @@ export async function handlePlanApproval(
     } else {
       state.chatContainer.addChild(approvalComponent);
     }
-    state.ui.requestRender();
+    // Force a full TUI redraw after the clear+rebuild so the differential
+    // rendering cache is reset. Without this, the stale cached line state from
+    // before the clear can cause incorrect height calculations mid-run.
+    state.ui.requestRender(true);
     state.chatContainer.invalidate();
     state.ui.setFocus(approvalComponent);
 
