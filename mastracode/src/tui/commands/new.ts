@@ -18,6 +18,13 @@ export async function handleNewCommand(ctx: SlashCommandContext): Promise<void> 
   state.allSystemReminderComponents = [];
   state.messageComponentsById.clear();
   state.allShellComponents = [];
+  // Reset per-run streaming state so orphaned references don't leak.
+  state.streamingComponent = undefined;
+  state.streamingMessage = undefined;
+  state.seenToolCallIds.clear();
+  state.subagentToolCallIds.clear();
+  state.currentRunSystemReminderKeys.clear();
+  state.followUpComponents = [];
   // Clear file tracking in display state (thread_created will also reset this)
   state.session.displayState.get().modifiedFiles.clear();
   // Clear per-thread ephemeral state from the global controller state
@@ -29,6 +36,7 @@ export async function handleNewCommand(ctx: SlashCommandContext): Promise<void> 
   state.taskToolInsertIndex = -1;
 
   ctx.updateStatusLine();
-  state.ui.requestRender();
+  // Force a full TUI redraw to reset the differential rendering cache.
+  state.ui.requestRender(true);
   ctx.showInfo('Ready for new conversation');
 }

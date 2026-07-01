@@ -751,6 +751,15 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
   state.pendingSignalMessageComponentsById.clear();
   state.allShellComponents = [];
 
+  // Reset per-run streaming state so orphaned references from a previous
+  // thread's active agent run don't leak into the new thread.
+  state.streamingComponent = undefined;
+  state.streamingMessage = undefined;
+  state.seenToolCallIds.clear();
+  state.subagentToolCallIds.clear();
+  state.currentRunSystemReminderKeys.clear();
+  state.followUpComponents = [];
+
   // Local accumulator for detecting task clears during visible history reconstruction.
   // Startup only replays task state from the bounded message window. If no task
   // snapshot exists in that window, keep the existing display-state snapshot.
@@ -1083,7 +1092,11 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
   }
 
   reconcileChatBoundarySpacers(state.chatContainer);
-  state.ui.requestRender();
+  // Force a full TUI redraw to reset the differential rendering cache
+  // (previousLines, maxLinesRendered, previousViewportTop, cursor positions).
+  // Without this, stale cached state from the previous thread can cause
+  // incorrect height calculations and permanently broken rendering.
+  state.ui.requestRender(true);
 }
 
 function unescapeSystemReminderText(text: string): string {
