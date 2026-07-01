@@ -30,6 +30,9 @@ function createState(): TUIState {
     messageComponentsById: new Map(),
     pendingSignalMessageComponentsById: new Map(),
     followUpComponents: [],
+    seenToolCallIds: new Set(),
+    subagentToolCallIds: new Set(),
+    currentRunSystemReminderKeys: new Set(),
     session: {
       state: {
         get: vi.fn(() => ({})),
