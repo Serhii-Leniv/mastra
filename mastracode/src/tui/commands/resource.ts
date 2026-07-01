@@ -71,7 +71,5 @@ export async function handleResourceCommand(ctx: SlashCommandContext, args: stri
   }
 
   ctx.updateStatusLine();
-  // Force full redraw after chatContainer.clear() so the differential
-  // rendering cache is reset and stale height state doesn't persist.
-  state.ui.requestRender(true);
+  state.ui.requestRender();
 }

@@ -35,7 +35,6 @@ import { TemporalGapComponent } from './components/temporal-gap.js';
 import { ToolExecutionComponentEnhanced } from './components/tool-execution-enhanced.js';
 import { PendingUserMessageComponent, UserMessageComponent } from './components/user-message.js';
 import { formatToolResult, isTaskMutationTool } from './handlers/tool.js';
-import { logHeightDebug, logThreadLoad } from './height-debug.js';
 import type { TUIState } from './state.js';
 import { BOX_INDENT, getMarkdownTheme, theme } from './theme.js';
 
@@ -724,17 +723,6 @@ function applyTaskToolResult(
 
 const STARTUP_MESSAGE_WINDOW_SIZE = 200;
 
-/**
- * Monotonically increasing version counter for renderExistingMessages calls.
- * When a new call begins, it increments the counter and captures the value.
- * After each async yield point, it compares its captured version against the
- * current value — if they differ, a newer call has superseded it and this one
- * bails out early. This prevents a stale async call (e.g. from the event
- * handler's thread_changed) from clearing chatContainer after a fresher call
- * (e.g. from threads.ts) has already rebuilt it.
- */
-let renderVersion = 0;
-
 function getLatestMessageTimestamp(messages: AgentControllerMessage[]): number | undefined {
   let latest: number | undefined;
   for (const message of messages) {
@@ -750,25 +738,8 @@ function getLatestMessageTimestamp(messages: AgentControllerMessage[]): number |
  * Called on thread switch and initial load.
  */
 export async function renderExistingMessages(state: TUIState): Promise<void> {
-  const myVersion = ++renderVersion;
-
   const messages = await state.session.thread.listActiveMessages({ limit: STARTUP_MESSAGE_WINDOW_SIZE });
-
-  // Another renderExistingMessages call was made while we were awaiting
-  // listActiveMessages — this call is stale, bail out to avoid clearing
-  // chatContainer that the newer call is building/has built.
-  if (renderVersion !== myVersion) {
-    logHeightDebug(`renderExistingMessages: SUPERSEDED (myVersion=${myVersion}, current=${renderVersion}), bailing`);
-    return;
-  }
-
   state.lastRenderedMessageAt = getLatestMessageTimestamp(messages);
-
-  const threadId = state.session.thread.getId?.() ?? 'unknown';
-  logThreadLoad(threadId, messages.length);
-  logHeightDebug(
-    `renderExistingMessages: termRows=${process.stdout.rows} termCols=${process.stdout.columns} messages=${messages.length}`,
-  );
 
   state.chatContainer.clear();
   state.pendingTools.clear();
@@ -779,17 +750,6 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
   state.messageComponentsById.clear();
   state.pendingSignalMessageComponentsById.clear();
   state.allShellComponents = [];
-
-  // Reset per-run streaming state so orphaned references from a previous
-  // thread's active agent run don't leak into the new thread.
-  state.streamingComponent = undefined;
-  state.streamingMessage = undefined;
-  state.lastSubmitPlanComponent = undefined;
-  state.lastAskUserComponent = undefined;
-  state.seenToolCallIds.clear();
-  state.subagentToolCallIds.clear();
-  state.currentRunSystemReminderKeys.clear();
-  state.followUpComponents = [];
 
   // Local accumulator for detecting task clears during visible history reconstruction.
   // Startup only replays task state from the bounded message window. If no task
@@ -1008,13 +968,6 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
                 ? resolvePlanPath(projectPath ?? process.cwd(), submittedPath)
                 : undefined;
               const recovered = recoverAbsPath ? await readPlanFile(recoverAbsPath) : undefined;
-              // Check for supersession after async readPlanFile
-              if (renderVersion !== myVersion) {
-                logHeightDebug(
-                  `renderExistingMessages: SUPERSEDED during plan file read (myVersion=${myVersion}, current=${renderVersion})`,
-                );
-                return;
-              }
               const planBody = submittedPlan?.plan ?? recovered?.plan ?? '';
               const planTitle = submittedPlan?.title || recovered?.title || 'Implementation Plan';
               const planResult = new PlanResultComponent({
@@ -1130,17 +1083,7 @@ export async function renderExistingMessages(state: TUIState): Promise<void> {
   }
 
   reconcileChatBoundarySpacers(state.chatContainer);
-
-  logHeightDebug(
-    `renderExistingMessages done: chatChildren=${state.chatContainer.children.length} ` +
-      `termRows=${process.stdout.rows} termCols=${process.stdout.columns}`,
-  );
-
-  // Force a full TUI redraw to reset the differential rendering cache
-  // (previousLines, maxLinesRendered, previousViewportTop, cursor positions).
-  // Without this, stale cached state from the previous thread can cause
-  // incorrect height calculations and permanently broken rendering.
-  state.ui.requestRender(true);
+  state.ui.requestRender();
 }
 
 function unescapeSystemReminderText(text: string): string {

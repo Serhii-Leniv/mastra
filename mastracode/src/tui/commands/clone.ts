@@ -62,9 +62,7 @@ export async function resetUIAfterClone(ctx: CloneResetContext, clonedTitle: str
 
   ctx.updateStatusLine();
   await ctx.renderExistingMessages();
-  // renderExistingMessages already calls requestRender(true); use force
-  // here too for consistency after chatContainer.clear().
-  state.ui.requestRender(true);
+  state.ui.requestRender();
   ctx.showInfo(`Cloned thread: ${clonedTitle}`);
 }
 

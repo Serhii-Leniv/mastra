@@ -1,3 +1,4 @@
+import { visibleWidth } from '@earendil-works/pi-tui';
 import { describe, expect, it } from 'vitest';
 
 import { sanitizeAnsiForRendering } from '../sanitize-ansi.js';
@@ -97,5 +98,57 @@ describe('sanitizeAnsiForRendering', () => {
 
   it('strips save/restore cursor (CSI s / CSI u)', () => {
     expect(sanitizeAnsiForRendering('before\x1b[safter\x1b[u')).toBe('beforeafter');
+  });
+});
+
+describe('sanitizeAnsiForRendering integration with pi-tui visibleWidth', () => {
+  it('unsanitized cursor-up causes visibleWidth to undercount (red without fix)', () => {
+    // \x1b[1A is cursor-up — pi-tui's extractAnsiCode scans past 'A' looking
+    // for m/G/K/H/J, swallowing all text until it finds one of those letters.
+    // "hello\x1b[1A world has many items" — the scanner eats from \x1b[1A
+    // through the 'm' in 'many', treating it all as one ANSI code.
+    const unsanitized = 'hello\x1b[1A world has many items';
+    const widthWithBug = visibleWidth(unsanitized);
+    // Without fix: visibleWidth dramatically undercounts because
+    // extractAnsiCode swallows text from \x1b[1A through 'm' in 'many'
+    expect(widthWithBug).toBeLessThan('hello world has many items'.length);
+
+    // With sanitization: cursor-up is stripped, visibleWidth is correct
+    const sanitized = sanitizeAnsiForRendering(unsanitized);
+    expect(sanitized).toBe('hello world has many items');
+    expect(visibleWidth(sanitized)).toBe('hello world has many items'.length);
+  });
+
+  it('unsanitized mode-switch causes visibleWidth to undercount (red without fix)', () => {
+    // \x1b[?25h (show cursor) ends with 'h' which is not in {m,G,K,H,J}.
+    // The scanner scans past 'h' and eats text until the next 'm'.
+    const unsanitized = 'start\x1b[?25h middle has some more text\x1b[0m end';
+    const widthWithBug = visibleWidth(unsanitized);
+    // The scanner eats from \x1b[?25h through 'm' in 'more', then \x1b[0m is
+    // properly handled. So visible text is roughly "start end" instead of
+    // "start middle has some more text end".
+    expect(widthWithBug).toBeLessThan('start middle has some more text end'.length);
+
+    // With sanitization: mode-switch is stripped, visibleWidth is correct
+    const sanitized = sanitizeAnsiForRendering(unsanitized);
+    expect(visibleWidth(sanitized)).toBe(visibleWidth('start middle has some more text\x1b[0m end'));
+  });
+
+  it('SGR codes are preserved and visibleWidth handles them correctly', () => {
+    const withSGR = '\x1b[1m\x1b[38;2;255;0;0mhello\x1b[0m world';
+    const sanitized = sanitizeAnsiForRendering(withSGR);
+    // SGR codes should be preserved
+    expect(sanitized).toBe(withSGR);
+    // visibleWidth should only count visible characters
+    expect(visibleWidth(sanitized)).toBe('hello world'.length);
+  });
+
+  it('formatToolResult output with shell escape codes is safe after sanitization', () => {
+    // Simulates tool output from a command that writes cursor movement codes
+    const shellOutput = 'Compiling...\x1b[1A\x1b[2KDone! 42 modules compiled.';
+    const sanitized = sanitizeAnsiForRendering(shellOutput);
+    // After sanitization, all visible text is preserved
+    expect(sanitized).toBe('Compiling...Done! 42 modules compiled.');
+    expect(visibleWidth(sanitized)).toBe('Compiling...Done! 42 modules compiled.'.length);
   });
 });

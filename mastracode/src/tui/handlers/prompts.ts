@@ -8,7 +8,6 @@ import { approvePlanFile, readPlanFile, resolvePlanPath } from '../../utils/plan
 import { AskQuestionDialogComponent } from '../components/ask-question-dialog.js';
 import { AskQuestionInlineComponent } from '../components/ask-question-inline.js';
 import { PlanApprovalInlineComponent } from '../components/plan-approval-inline.js';
-import { logHeightDebug } from '../height-debug.js';
 import { showModalOverlay } from '../overlay.js';
 import type { TUIState } from '../state.js';
 import { theme } from '../theme.js';
@@ -405,9 +404,6 @@ export async function handlePlanApproval(
     if (state.lastSubmitPlanComponent) {
       const children = [...state.chatContainer.children];
       const submitPlanIndex = children.indexOf(state.lastSubmitPlanComponent as any);
-      logHeightDebug(
-        `handlePlanApproval: lastSubmitPlanComponent found, submitPlanIndex=${submitPlanIndex}, children=${children.length}`,
-      );
       if (submitPlanIndex >= 0) {
         state.chatContainer.clear();
         for (let i = 0; i <= submitPlanIndex; i++) {
@@ -419,23 +415,13 @@ export async function handlePlanApproval(
         for (let i = submitPlanIndex + 1; i < children.length; i++) {
           state.chatContainer.addChild(children[i]!);
         }
-        logHeightDebug(
-          `handlePlanApproval: rebuilt chatContainer, new children=${state.chatContainer.children.length}`,
-        );
       } else {
         state.chatContainer.addChild(approvalComponent);
       }
     } else {
-      logHeightDebug(`handlePlanApproval: no lastSubmitPlanComponent, appending approval`);
       state.chatContainer.addChild(approvalComponent);
     }
-    // Force a full TUI redraw after the clear+rebuild so the differential
-    // rendering cache is reset. Without this, the stale cached line state from
-    // before the clear can cause incorrect height calculations mid-run.
-    logHeightDebug(
-      `handlePlanApproval: calling requestRender(true), chatChildren=${state.chatContainer.children.length}`,
-    );
-    state.ui.requestRender(true);
+    state.ui.requestRender();
     state.chatContainer.invalidate();
     state.ui.setFocus(approvalComponent);
 

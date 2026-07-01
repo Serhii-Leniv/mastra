@@ -10,7 +10,6 @@ import { hasHeadlessFlag, runMCCli } from './headless/index.js';
 import { createBrowserFromSettings, loadSettings } from './onboarding/settings.js';
 import { formatScaffoldSuccess, scaffoldPlugin } from './plugins/scaffold.js';
 import { detectTerminalTheme } from './tui/detect-theme.js';
-import { enablePiTuiDebug } from './tui/height-debug.js';
 import { MastraTUI } from './tui/index.js';
 import { applyThemeMode, restoreTerminalForeground } from './tui/theme.js';
 import { setupDebugLogging } from './utils/debug-log.js';
@@ -18,9 +17,6 @@ import { drainPipedStdin, reopenStdinFromTTY } from './utils/stdin-pipe.js';
 import { releaseAllThreadLocks } from './utils/thread-lock.js';
 import { getCurrentVersion } from './utils/update-check.js';
 import { createMastraCode } from './index.js';
-
-// Enable pi-tui debug logging when MC_DEBUG_HEIGHT=1. Must run before TUI init.
-enablePiTuiDebug();
 
 let controller: Awaited<ReturnType<typeof createMastraCode>>['controller'];
 let mcpManager: Awaited<ReturnType<typeof createMastraCode>>['mcpManager'];
@@ -171,7 +167,30 @@ process.on('exit', () => {
   // raw mode) are disabled on ANY exit path. Without this, killing the process
   // via SIGINT/SIGTERM leaves the terminal in a corrupted state where keypresses
   // produce escape sequences like "5;99~" instead of normal characters.
-  tui?.stop();
+  try {
+    tui?.stop();
+  } catch {
+    // Failsafe: even if MastraTUI.stop() throws, write raw terminal reset
+    // sequences to disable Kitty keyboard protocol, bracketed paste, and
+    // modifyOtherKeys. These are the exact sequences pi-tui's terminal.stop()
+    // would write.
+  }
+  // Belt-and-suspenders: always write terminal reset sequences directly,
+  // regardless of whether tui.stop() succeeded. Writing them twice is harmless
+  // but missing them leaves the terminal in a corrupted state.
+  try {
+    process.stdout.write(
+      '\x1b[?2004l' + // disable bracketed paste
+        '\x1b[<u' + // pop kitty keyboard protocol
+        '\x1b[>4;0m' + // disable modifyOtherKeys
+        '\x1b[?25h', // show cursor
+    );
+    if (process.stdin.setRawMode) {
+      process.stdin.setRawMode(false);
+    }
+  } catch {
+    // stdout may already be closed during exit
+  }
   restoreTerminalForeground();
   releaseAllThreadLocks();
 });
@@ -181,7 +200,11 @@ process.on('exit', () => {
 // escape sequences are written even if asyncCleanup hangs or the process is killed
 // during cleanup.
 const handleTermSignal = () => {
-  tui?.stop();
+  try {
+    tui?.stop();
+  } catch {
+    // ignored — exit handler has failsafe reset
+  }
   void asyncCleanup().finally(() => process.exit(0));
 };
 process.on('SIGINT', handleTermSignal);
